@@ -334,6 +334,50 @@ def test__render_https_endpoint_checks(mock_config, interface):
     nrpe.reset_mock()
 
 
+@pytest.mark.parametrize("interface", ["admin", "internal", "public"])
+@mock.patch("charmhelpers.core.hookenv.config")
+def test__render_http_endpoint_checks_disabled(mock_config, interface):
+    """Test render NRPE checks for http endpoints."""
+    nrpe = MagicMock()
+    test_url = "/"
+    test_host = "http://localhost"
+    test_port = "80"
+    test_interface = interface
+    test_kwargs = {"check_http_options": "", "enabled": False}
+
+    # enable check_{}_urls
+    mock_config.return_value = {"check_{}_urls".format(interface): True}
+    OSCHelper()._render_http_endpoint_checks(
+        test_url, test_host, test_port, nrpe, test_interface, **test_kwargs
+    )
+    nrpe.add_check.assert_not_called()
+    nrpe.remove_check.assert_called_with(
+        shortname="check_http",
+    )
+
+
+@pytest.mark.parametrize("interface", ["admin", "internal", "public"])
+@mock.patch("charmhelpers.core.hookenv.config")
+def test__render_https_endpoint_checks_disabled(mock_config, interface):
+    """Test render NRPE checks for https endpoints."""
+    nrpe = MagicMock()
+    test_url = "/"
+    test_host = "https://localhost"
+    test_port = "80"
+    test_interface = interface
+    test_kwargs = {"check_ssl_cert_options": "--ignore-sct", "enabled": False}
+
+    # enable check_{}_urls
+    mock_config.return_value = {"check_{}_urls".format(interface): True}
+    OSCHelper()._render_https_endpoint_checks(
+        test_url, test_host, test_port, nrpe, test_interface, **test_kwargs
+    )
+    nrpe.add_check.assert_not_called()
+    nrpe.remove_check.assert_called_with(
+        shortname="check_ssl_cert",
+    )
+
+
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_horizon_ssl_cert_check")
 @mock.patch("lib_openstack_service_checks.OSCHelper._render_horizon_connectivity_check")
 @mock.patch("lib_openstack_service_checks.NRPE")
@@ -506,8 +550,8 @@ def test_create_endpoint_checks__ignore_ocsp(
 ):
     """Test create endpoint check with additional check_ssl_cert option."""
     test_interface = "test"
-
     setattr(mock_any_endpoint, "interface", test_interface)
+    setattr(mock_any_endpoint, "enabled", True)
     setattr(
         mock_any_endpoint,
         "url",
@@ -524,6 +568,7 @@ def test_create_endpoint_checks__ignore_ocsp(
         "shortname": f"endpoint_{test_interface}_cert",
         "create_log": f"Added nrpe cert expiry check for: endpoint, {test_interface}",
         "remove_log": f"Removed nrpe cert expiry check for: endpoint, {test_interface}",
+        "enabled": True,
     }
 
     # test when flag is not set
@@ -556,8 +601,8 @@ def test_create_endpoint_checks__maximum_validity(
 ):
     """Test create endpoint check with additional check_ssl_cert option."""
     test_interface = "test"
-
     setattr(mock_any_endpoint, "interface", test_interface)
+    setattr(mock_any_endpoint, "enabled", True)
     setattr(
         mock_any_endpoint,
         "url",
@@ -574,6 +619,7 @@ def test_create_endpoint_checks__maximum_validity(
         "shortname": f"endpoint_{test_interface}_cert",
         "create_log": f"Added nrpe cert expiry check for: endpoint, {test_interface}",
         "remove_log": f"Removed nrpe cert expiry check for: endpoint, {test_interface}",
+        "enabled": True,
     }
 
     # test with maximum validity option not set
@@ -614,6 +660,45 @@ def test_create_endpoint_checks__maximum_validity(
         **expected_args,
         check_ssl_cert_options="--ignore-sct --maximum-validity 1234",
     )
+
+
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_https_endpoint_checks")
+@mock.patch("lib_openstack_service_checks.OSCHelper._render_http_endpoint_checks")
+@mock.patch("charmhelpers.core.hookenv.config")
+def test_create_endpoint_checks__disabled_endpoint(
+    mock_config,
+    mock_render_http,
+    mock_render_https,
+    mock_any_endpoint,
+):
+    """Test create endpoint check with additional check_ssl_cert option."""
+    test_interface = "test"
+
+    setattr(mock_any_endpoint, "interface", test_interface)
+    setattr(mock_any_endpoint, "enabled", False)
+    setattr(
+        mock_any_endpoint,
+        "url",
+        "https://localhost/",
+    )
+
+    expected_args = {
+        "url": "/",
+        "host": "localhost",
+        "port": 443,
+        "nrpe": ANY,
+        "interface": test_interface,
+        "description": f"Certificate expiry check for endpoint {test_interface}",
+        "shortname": f"endpoint_{test_interface}_cert",
+        "create_log": f"Added nrpe cert expiry check for: endpoint, {test_interface}",
+        "remove_log": f"Removed nrpe cert expiry check for: endpoint, {test_interface}",
+        "enabled": False,
+        "check_ssl_cert_options": "--ignore-sct --ignore-maximum-validity",
+    }
+
+    mock_config.return_value = {"check-ssl-cert-maximum-validity": -1}
+    OSCHelper().create_endpoint_checks()
+    mock_render_https.assert_called_with(**expected_args)
 
 
 @pytest.mark.parametrize("v2_interface_url", ["adminurl", "internalurl", "publicurl"])
@@ -691,6 +776,7 @@ def test_create_endpoint_checks__v2_services(
     """Test create endpoint check for v2 services."""
     v2_interface_url = v3_interface["interface"] + "url"
     mock_any_endpoint.mock_add_spec([v2_interface_url])
+    setattr(mock_any_endpoint, "enabled", True)
     setattr(
         mock_any_endpoint,
         v2_interface_url,

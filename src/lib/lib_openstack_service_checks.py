@@ -740,7 +740,9 @@ class OSCHelper:
 
     def _render_http_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
         """Render NRPE checks for http endpoint."""
-        if self.charm_config.get("check_{}_urls".format(interface)):
+        if kwargs.get("enabled", True) and self.charm_config.get(
+            "check_{}_urls".format(interface)
+        ):
             command = "{} -H {} -p {} -u {} {}".format(
                 "/usr/lib/nagios/plugins/check_http",
                 host,
@@ -764,7 +766,9 @@ class OSCHelper:
 
     def _render_https_endpoint_checks(self, url, host, port, nrpe, interface, **kwargs):
         """Render NRPE checks for https endpoint and its certificate chain."""
-        if self.charm_config.get("check_{}_urls".format(interface)):
+        if kwargs.get("enabled", True) and self.charm_config.get(
+            "check_{}_urls".format(interface)
+        ):
             command = "{} -H {} -p {} -u {} -c {} -w {} {}".format(
                 os.path.join(self.plugins_dir, "check_ssl_cert"),
                 host,
@@ -879,6 +883,7 @@ class OSCHelper:
                         service_name, endpoint.interface
                     ),
                     check_ssl_cert_options=check_ssl_cert_options,
+                    enabled=endpoint.enabled,
                 )
                 check_http_options.append("-S")
 
@@ -900,6 +905,7 @@ class OSCHelper:
                     service_name, endpoint.interface
                 ),
                 check_http_options="".join(check_http_options),
+                enabled=endpoint.enabled,
             )
 
         nrpe.write()

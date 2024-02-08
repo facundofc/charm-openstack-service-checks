@@ -1,4 +1,5 @@
 """Test helper library functions."""
+
 from unittest import mock
 from unittest.mock import ANY, MagicMock, mock_open
 

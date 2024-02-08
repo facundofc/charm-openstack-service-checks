@@ -1,4 +1,5 @@
 """Test MySQL Innodb Cluster Service Checks."""
+
 import json
 import unittest.mock as mock
 from argparse import Namespace

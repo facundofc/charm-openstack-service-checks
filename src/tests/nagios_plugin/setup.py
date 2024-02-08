@@ -1,4 +1,5 @@
 """Setup nagios_plugin3 module for unittesting."""
+
 import os
 import urllib.request
 from tempfile import TemporaryDirectory

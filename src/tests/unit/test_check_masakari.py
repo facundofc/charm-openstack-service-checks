@@ -1,4 +1,5 @@
 """Test masakari nagios check script."""
+
 import unittest.mock as mock
 from uuid import uuid4
 

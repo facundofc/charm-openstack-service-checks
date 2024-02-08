@@ -50,9 +50,9 @@ def _load_envvars(novarc="/var/lib/nagios/nagios.novarc"):
 
     os.environ["SHELL"] = "/bin/bash"
     os.environ["HOME"] = "/home/nagiososc"
-    os.environ[
-        "PATH"
-    ] = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+    os.environ["PATH"] = (
+        "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+    )
 
     return i >= 3
 
